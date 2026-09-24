@@ -17,6 +17,6 @@ and checksums.
 
 Official LLVM release archives are not repackaged: 18.1.8 has none for
 macos-x86_64, the Linux ones link `llvm-config` against `libtinfo.so.5` and
-their static libraries need zlib and terminfo on the host, and the Windows
-installer ships no `llvm-config`. These builds disable zlib, zstd, libxml2
-and terminfo, so the libraries need nothing beyond the C and C++ runtimes.
+their static libraries need zlib and terminfo on the host. Building every
+host from the same configuration, with zlib, zstd, libxml2 and terminfo
+disabled, leaves libraries that need nothing beyond the C and C++ runtimes.
