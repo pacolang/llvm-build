@@ -16,7 +16,8 @@ tarball="llvm-project-$version.src.tar.xz"
 if [ ! -f "$tarball" ]; then
   curl -sfLO "https://github.com/llvm/llvm-project/releases/download/llvmorg-$version/$tarball"
 fi
-echo "$source_sha256  $tarball" | sha256sum -c -
+sha256() { if command -v sha256sum > /dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+echo "$source_sha256  $tarball" | sha256 -c -
 if [ ! -d "llvm-project-$version.src" ]; then
   tar xJf "$tarball" "llvm-project-$version.src/llvm" "llvm-project-$version.src/lld" \
     "llvm-project-$version.src/cmake" "llvm-project-$version.src/libunwind/include" \
