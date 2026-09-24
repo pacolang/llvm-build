@@ -36,9 +36,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Ninja (Linux)
+      - name: Install Ninja, clang and lld (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ninja-build
+        run: sudo apt-get update && sudo apt-get install -y ninja-build clang lld
 
       - name: Install Ninja (macOS)
         if: runner.os == 'macOS'
@@ -59,9 +59,20 @@ jobs:
         id: build
         run: |
           start=$(date +%s)
-          archive="$(./build.sh ${{ matrix.host }} | tail -1)"
+          if ! ./build.sh ${{ matrix.host }} > build.log 2>&1; then
+            tail -n 200 build.log
+            exit 1
+          fi
+          archive="$PWD/llvm-18.1.8-${{ matrix.host }}.tar.xz"
           echo "build took $(( $(date +%s) - start ))s; $(du -h "$archive" | cut -f1) $archive" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+      - name: Upload the build log
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-${{ matrix.host }}
+          path: build.log
 
       - name: Smoke test the archive
         run: |

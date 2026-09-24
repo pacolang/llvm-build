@@ -20,3 +20,10 @@ macos-x86_64, the Linux ones link `llvm-config` against `libtinfo.so.5` and
 their static libraries need zlib and terminfo on the host. Building every
 host from the same configuration, with zlib, zstd, libxml2 and terminfo
 disabled, leaves libraries that need nothing beyond the C and C++ runtimes.
+
+If a bump must land before a build finishes, conda-forge's `llvmdev` package
+has static libraries and `llvm-config` for all five hosts (win-64 is MSVC);
+it is built with zlib and zstd, so a repackaged copy adds `-lz -lzstd` to
+`llvm-config --system-libs`. On Windows the build disables the DIA SDK so
+`llvm-config --system-libs` names no Visual Studio path (the official 18.1.x
+Windows archive names the build machine's `diaguids.lib`, llvm/llvm-project#86250).

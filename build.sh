@@ -26,8 +26,13 @@ fi
 
 extra=()
 case "$host" in
+  linux-*)
+    if command -v clang > /dev/null && command -v ld.lld > /dev/null; then
+      extra+=(-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ -DLLVM_USE_LINKER=lld)
+    fi
+    ;;
   macos-*) extra+=(-DCMAKE_OSX_DEPLOYMENT_TARGET=11.0) ;;
-  windows-*) extra+=(-DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl) ;;
+  windows-*) extra+=(-DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DLLVM_ENABLE_DIA_SDK=OFF) ;;
 esac
 if command -v sccache > /dev/null; then
   extra+=(-DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache)
@@ -62,6 +67,10 @@ exe=""
 case "$host" in windows-*) exe=.exe ;; esac
 "$name/bin/llvm-config$exe" --version | grep -qx "$version"
 "$name/bin/llvm-config$exe" --link-static --libs > /dev/null
+if "$name/bin/llvm-config$exe" --system-libs --link-static | grep -qi diaguids; then
+  echo "llvm-config names the DIA SDK; it must not depend on the build machine's Visual Studio" >&2
+  exit 1
+fi
 "$name/bin/lld$exe" -flavor gnu --version
 
 XZ_OPT="-T0 -6" tar cJf "$out" "$name"
