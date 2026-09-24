@@ -1,0 +1,5 @@
+work/
+smoke/target/
+smoke/Cargo.lock
+smoke-prefix/
+*.tar.xz

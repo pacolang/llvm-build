@@ -63,6 +63,15 @@ jobs:
           echo "build took $(( $(date +%s) - start ))s; $(du -h "$archive" | cut -f1) $archive" | tee -a "$GITHUB_STEP_SUMMARY"
           echo "archive=$archive" >> "$GITHUB_OUTPUT"
 
+      - name: Smoke test the archive
+        run: |
+          rm -rf smoke-prefix && mkdir smoke-prefix
+          tar xJf "${{ steps.build.outputs.archive }}" -C smoke-prefix
+          prefix="$PWD/smoke-prefix/llvm-18.1.8-${{ matrix.host }}"
+          if command -v cygpath > /dev/null; then prefix="$(cygpath -m "$prefix")"; fi
+          "$prefix/bin/llvm-config" --version --libs --system-libs --link-static
+          LLVM_SYS_181_PREFIX="$prefix" cargo run --release --manifest-path smoke/Cargo.toml
+
       - uses: actions/upload-artifact@v4
         with:
           name: llvm-${{ matrix.host }}
