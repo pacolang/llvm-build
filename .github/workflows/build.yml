@@ -81,6 +81,9 @@ jobs:
           prefix="$PWD/smoke-prefix/llvm-18.1.8-${{ matrix.host }}"
           if command -v cygpath > /dev/null; then prefix="$(cygpath -m "$prefix")"; fi
           "$prefix/bin/llvm-config" --version --libs --system-libs --link-static
+          if [ -n "${VCToolsInstallDir:-}" ]; then
+            export CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_LINKER="${VCToolsInstallDir}bin\Hostx64\x64\link.exe"
+          fi
           LLVM_SYS_181_PREFIX="$prefix" cargo run --release --manifest-path smoke/Cargo.toml
 
       - uses: actions/upload-artifact@v4
