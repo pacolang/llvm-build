@@ -7,7 +7,6 @@ on:
         description: Release tag to publish (empty builds without publishing)
         required: false
         default: ""
-  pull_request:
 
 permissions:
   contents: read
