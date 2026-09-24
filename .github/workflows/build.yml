@@ -7,29 +7,37 @@ on:
         description: Release tag to publish (empty builds without publishing)
         required: false
         default: ""
+      hosts:
+        description: Hosts to build, space-separated (linux-x86_64 linux-aarch64 macos-aarch64 macos-x86_64 windows-x86_64), or all
+        required: false
+        default: all
 
 permissions:
   contents: read
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.plan.outputs.matrix }}
+    steps:
+      - id: plan
+        env:
+          HOSTS: ${{ inputs.hosts }}
+        run: |
+          all='[{"host":"linux-x86_64","os":"ubuntu-22.04"},{"host":"linux-aarch64","os":"ubuntu-22.04-arm"},{"host":"macos-aarch64","os":"macos-14"},{"host":"macos-x86_64","os":"macos-15-intel"},{"host":"windows-x86_64","os":"windows-2022"}]'
+          matrix="$(jq -c --arg hosts "$HOSTS" '[.[] | select(.host as $h | $hosts == "all" or (($hosts | split(" ") | index($h)) != null))] | {include: .}' <<< "$all")"
+          [ "$(jq '.include | length' <<< "$matrix")" -gt 0 ] || { echo "no host matches: $HOSTS" >&2; exit 1; }
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
   build:
     name: ${{ matrix.host }}
+    needs: plan
     runs-on: ${{ matrix.os }}
     timeout-minutes: 360
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - host: linux-x86_64
-            os: ubuntu-22.04
-          - host: linux-aarch64
-            os: ubuntu-22.04-arm
-          - host: macos-aarch64
-            os: macos-14
-          - host: macos-x86_64
-            os: macos-15-intel
-          - host: windows-x86_64
-            os: windows-2022
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     defaults:
       run:
         shell: bash
@@ -118,6 +126,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          if gh release view "${{ inputs.tag }}" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            gh release upload "${{ inputs.tag }}" dist/* --clobber --repo "${{ github.repository }}"
+            exit 0
+          fi
           gh release create "${{ inputs.tag }}" dist/* --repo "${{ github.repository }}" \
             --target "${{ github.sha }}" --title "${{ inputs.tag }}" \
             --notes "LLVM 18.1.8 (llvmorg-18.1.8) built by \`build.sh\` at ${{ github.sha }}: static libraries, llvm-config, lld; X86 and AArch64 targets; no assertions. Verify with \`sha256sum -c <archive>.sha256\` or \`gh attestation verify <archive> --repo ${{ github.repository }}\`."
