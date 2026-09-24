@@ -18,9 +18,21 @@ permissions:
 jobs:
   plan:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
     outputs:
       matrix: ${{ steps.plan.outputs.matrix }}
     steps:
+      - name: Check that the release can be published
+        if: inputs.tag != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          probe="preflight-${{ github.run_id }}"
+          gh release create "$probe" --draft --title "$probe" --notes "" --target "${{ github.sha }}" --repo "${{ github.repository }}"
+          gh release delete "$probe" --yes --cleanup-tag --repo "${{ github.repository }}"
+
       - id: plan
         env:
           HOSTS: ${{ inputs.hosts }}
@@ -34,7 +46,7 @@ jobs:
     name: ${{ matrix.host }}
     needs: plan
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 360
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
@@ -104,6 +116,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' && inputs.tag != ''
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: write
       id-token: write
